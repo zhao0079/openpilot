@@ -41,7 +41,7 @@ extern const struct pios_com_driver pios_usart_com_driver;
 
 struct pios_usart_cfg {
 	USART_TypeDef *regs;
-	uint32_t remap;		/* GPIO_Remap_* */
+	uint32_t remap;		/* GPIO_Remap_* or GPIO_AF_* */
 	USART_InitTypeDef init;
 	struct stm32_gpio rx;
 	struct stm32_gpio tx;

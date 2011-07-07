@@ -1,0 +1,73 @@
+define connect
+	target remote localhost:3333
+	monitor cortex_m3 vector_catch all
+	file ./build/px2fmu/px2fmu.elf
+end
+#monitor reset halt
+
+# mask interrupts while single-stepping
+define hook-step
+	monitor cortex_m3 maskisr on
+end
+define hookpost-step
+	monitor cortex_m3 maskisr off
+end
+
+define hook-stepi
+	monitor cortex_m3 maskisr on
+end
+
+define hookpost-stepi
+	monitor cortex_m3 maskisr off
+end
+
+define hook-next
+	monitor cortex_m3 maskisr on
+end
+
+define hookpost-next
+	monitor cortex_m3 maskisr off
+end
+
+define hook-finish
+	monitor cortex_m3 maskisr on
+end
+
+define hookpost-finish
+	monitor cortex_m3 maskisr off
+end
+
+# FreeRTOS macros
+define showtask
+       set $tcb = (struct tskTaskControlBlock*)$arg0
+       printf "  0x%08x %s\n", $tcb, $tcb->pcTaskName
+end
+
+define showtasklist
+	set $list = (struct xLIST *)$arg0
+	set $entry = $list->xListEnd.pxNext
+
+	while $entry != &$list->xListEnd
+       		showtask $entry->pvOwner
+		set $entry = $entry->pxNext
+	end
+end
+
+define showtasks
+	set $priority = sizeof(pxReadyTasksLists) / sizeof(pxReadyTasksLists[0])
+	while $priority > 0
+		set $priority = $priority - 1
+		printf "ready - %d:\n", $priority
+		showtasklist &pxReadyTasksLists[$priority]
+	end
+	printf "ready - pending:\n"
+	showtasklist &xPendingReadyList
+	printf "delayed:\n"
+	showtasklist pxDelayedTaskList
+	showtasklist pxOverflowDelayedTaskList
+	printf "suspended:\n"
+	showtasklist &xSuspendedTaskList
+	printf "waiting termination:\n"
+	showtasklist &xTasksWaitingTermination
+	
+end

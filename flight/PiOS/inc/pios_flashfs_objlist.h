@@ -28,10 +28,22 @@
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
+#ifndef PIOS_FLASHFS_OBJLIST_H_
+#define PIOS_FLASHFS_OBJLIST_H_
+
 #include "openpilot.h"
 #include "uavobjectmanager.h"
 
-int32_t PIOS_FLASHFS_Init();
+typedef struct {
+	uint32_t	sector_size;
+	int8_t		(* EraseSector)(uint32_t addr);
+	int8_t		(* WriteData)(uint32_t addr, uint8_t *data, uint16_t len);
+	int8_t		(* ReadData)(uint32_t addr, uint8_t *data, uint16_t len);
+} PIOS_FLASHFS_Driver;
+
+int32_t PIOS_FLASHFS_Init(PIOS_FLASHFS_Driver *withDriver);
 int32_t PIOS_FLASHFS_ObjSave(UAVObjHandle obj, uint16_t instId, uint8_t * data);
 int32_t PIOS_FLASHFS_ObjLoad(UAVObjHandle obj, uint16_t instId, uint8_t * data);
 int32_t PIOS_FLASHFS_ObjDelete(UAVObjHandle obj, uint16_t instId);
+
+#endif

@@ -32,6 +32,12 @@
 #ifndef PIOS_HMC5883_H
 #define PIOS_HMC5883_H
 
+struct pios_hmc5883_data {
+	int16_t x;
+	int16_t y;
+	int16_t z;
+};
+
 /* HMC5883 Addresses */
 #define PIOS_HMC5883_I2C_ADDR			0x1E
 #define PIOS_HMC5883_I2C_READ_ADDR      0x3D
@@ -93,7 +99,7 @@
 /* Public Functions */
 extern void PIOS_HMC5883_Init(void);
 extern bool PIOS_HMC5883_NewDataAvailable(void);
-extern void PIOS_HMC5883_ReadMag(int16_t out[3]);
+extern void PIOS_HMC5883_ReadMag(struct pios_hmc5883_data * data);
 extern void PIOS_HMC5883_ReadID(uint8_t out[4]);
 extern int32_t PIOS_HMC5883_Test(void);
 

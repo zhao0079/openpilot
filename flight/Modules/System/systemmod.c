@@ -54,9 +54,13 @@
 #define LED_BLINK_RATE_HZ 5
 
 #ifndef IDLE_COUNTS_PER_SEC_AT_NO_LOAD
-#define IDLE_COUNTS_PER_SEC_AT_NO_LOAD 995998	// calibrated by running tests/test_cpuload.c
+#ifndef STM32F2XX
+#define IDLE_COUNTS_PER_SEC_AT_NO_LOAD 995998  // calibrated by running tests/test_cpuload.c
+#else
+#define IDLE_COUNTS_PER_SEC_AT_NO_LOAD 2492247	// calibrated by running tests/test_cpuload.c
 											  // must be updated if the FreeRTOS or compiler
 											  // optimisation options are changed.
+#endif
 #endif
 
 #if defined(PIOS_SYSTEM_STACK_SIZE)

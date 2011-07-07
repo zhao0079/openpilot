@@ -29,6 +29,7 @@
 
 /* Project Includes */
 #include "pios.h"
+#include "stdio.h"
 
 #if defined(PIOS_INCLUDE_COM)
 

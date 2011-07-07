@@ -73,6 +73,28 @@ void PIOS_BMP085_Init(void)
 	PIOS_BMP085_EOC = 0;
 #endif
 
+#ifdef STM32F2XX
+	/* Configure EOC pin as input floating */
+	GPIO_InitStructure.GPIO_Pin = PIOS_BMP085_EOC_GPIO_PIN;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
+	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	GPIO_Init(PIOS_BMP085_EOC_GPIO_PORT, &GPIO_InitStructure);
+
+	/* Configure the End Of Conversion (EOC) interrupt */
+	SYSCFG_EXTILineConfig(PIOS_BMP085_EOC_PORT_SOURCE, PIOS_BMP085_EOC_PIN_SOURCE);
+	EXTI_InitStructure.EXTI_Line = PIOS_BMP085_EOC_EXTI_LINE;
+	EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
+	EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Rising;
+	EXTI_InitStructure.EXTI_LineCmd = ENABLE;
+	EXTI_Init(&EXTI_InitStructure);
+
+	/* Enable and set EOC EXTI Interrupt to the lowest priority */
+	NVIC_InitStructure.NVIC_IRQChannel = PIOS_BMP085_EOC_IRQn;
+	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = PIOS_BMP085_EOC_PRIO;
+	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
+	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+	NVIC_Init(&NVIC_InitStructure);
+#else
 	/* Enable EOC GPIO clock */
 	RCC_APB2PeriphClockCmd(PIOS_BMP085_EOC_CLK | RCC_APB2Periph_AFIO, ENABLE);
 
@@ -95,11 +117,12 @@ void PIOS_BMP085_Init(void)
 	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_Init(&NVIC_InitStructure);
-
+	
 	/* Configure XCLR pin as push/pull alternate funtion output */
 	GPIO_InitStructure.GPIO_Pin = PIOS_BMP085_XCLR_GPIO_PIN;
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
 	GPIO_Init(PIOS_BMP085_XCLR_GPIO_PORT, &GPIO_InitStructure);
+#endif
 
 	/* Read all 22 bytes of calibration data in one transfer, this is a very optimized way of doing things */
 	uint8_t Data[BMP085_CALIB_LEN];

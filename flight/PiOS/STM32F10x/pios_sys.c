@@ -34,9 +34,14 @@
 
 #if defined(PIOS_INCLUDE_SYS)
 
+#define CLOCK_SOURCE_HSI	1
+#define CLOCK_SOURCE_HSE	2
+
 /* Private Function Prototypes */
 void NVIC_Configuration(void);
 void SysTick_Handler(void);
+static int
+PIOS_SYS_ClockInit(const struct pios_clock_cfg *cfg) __attribute__((used));
 
 /* Local Macros */
 #define MEM8(addr)  (*((volatile uint8_t  *)(addr)))
@@ -48,8 +53,17 @@ void SysTick_Handler(void);
 */
 void PIOS_SYS_Init(void)
 {
+#ifdef PIOS_CLOCK_CONFIG
+	/* do custom clock etc. config */
+	{
+		extern struct pios_clock_cfg PIOS_CLOCK_CONFIG;
+
+		PIOS_SYS_ClockInit(&PIOS_CLOCK_CONFIG);
+	}
+#else
 	/* Setup STM32 system (RCC, clock, PLL and Flash configuration) - CMSIS Function */
 	SystemInit();
+#endif
 
 	/* Enable GPIOA, GPIOB, GPIOC, GPIOD, GPIOE and AFIO clocks */
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA | RCC_APB2Periph_GPIOB | RCC_APB2Periph_GPIOC | RCC_APB2Periph_GPIOD | RCC_APB2Periph_GPIOE |
@@ -195,6 +209,79 @@ void NVIC_Configuration(void)
 	/* Configure HCLK clock as SysTick clock source. */
 	SysTick_CLKSourceConfig(SysTick_CLKSource_HCLK);
 }
+
+/*
+ * Clock init for F10xx devices, both Value and Normal line.
+ *
+ * Assumes the RCC is in the as-reset state.
+ *
+ * @param			The desired clock configuration.
+ * @return			Zero if the clock(s) started correctly.
+ */
+static int
+PIOS_SYS_ClockInit(const struct pios_clock_cfg *cfg)
+{
+	RCC_ClocksTypeDef	clocks;
+
+	/* restore RCC to a sane state */
+	RCC_DeInit();
+
+	/* enable the flash prefetch buffer */
+	FLASH_PrefetchBufferCmd(ENABLE);
+
+	/* configure bus prescalers */
+	RCC_HCLKConfig(cfg->hclk_prescale);
+	RCC_PCLK1Config(cfg->pclk1_prescale);
+	RCC_PCLK2Config(cfg->pclk2_prescale);
+	RCC_ADCCLKConfig(cfg->adc_prescale);
+
+	/* HSI has fixed frequency and prescale */
+	if (cfg->source == RCC_PLLSource_HSI_Div2) {
+		/* nothing to do here */
+	} else {
+
+		/* program the HSE prescaler if required */
+#if defined(RCC_PLLSource_PREDIV1)
+		RCC_PREDIV1Config(RCC_PREDIV1_Source_HSE, cfg->refclock_prescale);
+#endif
+
+		/* start the HSE */
+		RCC_HSEConfig(RCC_HSE_ON);
+
+		/* wait for the HSE to stabilise */
+		if (!RCC_WaitForHSEStartUp()) {
+			return -1;
+		}
+	}
+
+	/*
+	 * Select the slowest possible flash configuration, since we don't know
+	 * where HCLK is going to end up.
+	 */
+	FLASH_SetLatency(FLASH_Latency_2);
+
+	/* configure the PLL */
+	RCC_PLLConfig(cfg->source, cfg->pll_multiply);
+
+	/* start the PLL and wait for it */
+	RCC_PLLCmd(ENABLE);
+	while (!RCC_GetITStatus(RCC_IT_PLLRDY)) {
+	}
+
+	/* switch the system clock to the PLL */
+	RCC_SYSCLKConfig(RCC_SYSCLKSource_PLLCLK);
+
+	/* now work out if we can drop the number of flash waitstates */
+	RCC_GetClocksFreq(&clocks);
+	if (clocks.HCLK_Frequency < (30 * 1000 * 1000)) {
+		FLASH_SetLatency(FLASH_Latency_0);
+	} else if (clocks.HCLK_Frequency < (60 * 1000 *1000)) {
+		FLASH_SetLatency(FLASH_Latency_1);
+	}
+
+	return 0;
+}
+
 
 #ifdef USE_FULL_ASSERT
 /**

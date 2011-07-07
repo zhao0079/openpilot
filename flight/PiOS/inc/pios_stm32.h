@@ -38,12 +38,16 @@ struct stm32_irq {
 };
 
 struct stm32_dma_chan {
+#if defined(STM32F2XX)
+	DMA_Stream_TypeDef *channel;
+#else
 	DMA_Channel_TypeDef *channel;
+#endif
 	DMA_InitTypeDef init;
 };
 
 struct stm32_dma {
-	uint32_t ahb_clk;
+	uint32_t ahb_clk;			/* ignored on STM32F2XX */
 	struct stm32_irq irq;
 	struct stm32_dma_chan rx;
 	struct stm32_dma_chan tx;

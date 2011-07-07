@@ -3,7 +3,7 @@
  * @addtogroup PIOS PIOS Core hardware abstraction layer
  * @{
  * @addtogroup   PIOS_ADC ADC Functions
- * @brief PIOS interface for USART port
+ * @brief PIOS interface for ADC
  * @{
  *
  * @file       pios_adc_priv.h

@@ -17,9 +17,15 @@
 /*****************************************************************************************
  *	Public Definitions/Macros
  ****************************************************************************************/
+#if defined(STM32F2XX)
+#define MAGIC_REG_1		RTC_BKP_DR1
+#define MAGIC_REG_2		RTC_BKP_DR2
+#define IAP_COMM		RTC_BKP_DR3
+#else
 #define MAGIC_REG_1		BKP_DR1
 #define MAGIC_REG_2		BKP_DR2
 #define IAP_COMM		BKP_DR3
+#endif
 
 #define IAP_COMM_INVALID	0
 #define IAP_COMM_USB		1

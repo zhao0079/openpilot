@@ -31,6 +31,13 @@
 #define W25X_STATUS_SEC             0x40
 #define W25X_STATUS_SRP0            0x80
 
+PIOS_FLASHFS_Driver PIOS_Flash_W25X_Driver = {
+		0x1000,							/* flash sector size */
+		PIOS_Flash_W25X_EraseSector,
+		PIOS_Flash_W25X_WriteData,
+		PIOS_Flash_W25X_ReadData
+};
+
 static uint8_t device_type;
 
 //! Private functions

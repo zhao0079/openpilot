@@ -47,8 +47,15 @@
 #include <math.h>
 
 /* STM32 Std Perf Lib */
+#if defined(STM32F2XX)
+#include <stm32f2xx.h>
+#include "timers.h"
+// XXX probably don't need this (header above gets it)
+#include <stm32f2xx_conf.h>
+#else
 #include <stm32f10x.h>
 #include <stm32f10x_conf.h>
+#endif
 
 #if defined(PIOS_INCLUDE_SDCARD)
 /* Dosfs Includes */
@@ -91,6 +98,11 @@
 /* PIOS Hardware Includes (Common) */
 #include <pios_sdcard.h>
 #include <pios_com.h>
+#if defined(PIOS_INCLUDE_EEPROM)
+#include <pios_eeprom.h>
+#endif
+#include <pios_lis331.h>
+#include <pios_l3g4200.h>
 #if defined(PIOS_INCLUDE_BMP085)
 #include <pios_bmp085.h>
 #endif

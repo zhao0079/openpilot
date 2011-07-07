@@ -40,7 +40,7 @@ typedef enum { LED1 = 0, LED2 = 1, LED3 = 2 } LedTypeDef;
 #elif (PIOS_LED_NUM == 4)
 typedef enum { LED1 = 0, LED2 = 1, LED3 = 2, LED4 = 3 } LedTypeDef;
 #else
-#error PIOS_LED_NUM not defined
+#error PIOS_LED_NUM not defined to a supported value.
 #endif
 
 /* Public Functions */

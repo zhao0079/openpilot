@@ -141,7 +141,10 @@ static void actuatorTask(void* parameters)
 	int16_t ChannelNeutral[ACTUATORCOMMAND_CHANNEL_NUMELEM];
 	uint16_t ChannelUpdateFreq[ACTUATORSETTINGS_CHANNELUPDATEFREQ_NUMELEM];
 	ActuatorSettingsChannelUpdateFreqGet(ChannelUpdateFreq);
+	// TODO XXX Replace this with a real OP-wide define switch for enabling / disabling servo out
+#ifndef STM32F2XX
 	PIOS_Servo_SetHz(&ChannelUpdateFreq[0], ACTUATORSETTINGS_CHANNELUPDATEFREQ_NUMELEM);
+#endif
 
 	float * status = (float *)&mixerStatus; //access status objects as an array of floats
 
@@ -491,7 +494,10 @@ static void actuator_update_rate(UAVObjEvent * ev)
 	uint16_t ChannelUpdateFreq[ACTUATORSETTINGS_CHANNELUPDATEFREQ_NUMELEM];
 	if ( ev->obj == ActuatorSettingsHandle() ) {
 		ActuatorSettingsChannelUpdateFreqGet(ChannelUpdateFreq);
+// TODO XXX Replace this with a real OP-wide define switch for enabling / disabling servo out
+#ifndef STM32F2XX
 		PIOS_Servo_SetHz(&ChannelUpdateFreq[0], ACTUATORSETTINGS_CHANNELUPDATEFREQ_NUMELEM);
+#endif
 	}
 }
 
@@ -505,6 +511,8 @@ static bool set_channel(uint8_t mixer_channel, uint16_t value) {
 	ActuatorSettingsData settings;
 	ActuatorSettingsGet(&settings);
 	
+	settings.ChannelType[mixer_channel] = ACTUATORSETTINGS_CHANNELTYPE_MK;
+
 	switch(settings.ChannelType[mixer_channel]) {
 		case ACTUATORSETTINGS_CHANNELTYPE_PWMALARMBUZZER: {
 			// This is for buzzers that take a PWM input
@@ -548,19 +556,24 @@ static bool set_channel(uint8_t mixer_channel, uint16_t value) {
 					lastSysTime = thisSysTime;
 				}
 			}
+			// TODO XXX Replace this with a real OP-wide define switch for enabling / disabling servo out
+#ifndef STM32F2XX
 			PIOS_Servo_Set(	settings.ChannelAddr[mixer_channel],
 							buzzOn?settings.ChannelMax[mixer_channel]:settings.ChannelMin[mixer_channel]);
+#endif
 			return true;
 		}
+		// TODO XXX Replace this with a real OP-wide define switch for enabling / disabling servo out
+#ifndef STM32F2XX
 		case ACTUATORSETTINGS_CHANNELTYPE_PWM:
 			PIOS_Servo_Set(settings.ChannelAddr[mixer_channel], value);
 			return true;
+#endif
 #if defined(PIOS_INCLUDE_I2C_ESC)
 		case ACTUATORSETTINGS_CHANNELTYPE_MK: 
 			return PIOS_SetMKSpeed(settings.ChannelAddr[mixer_channel],value);
 		case ACTUATORSETTINGS_CHANNELTYPE_ASTEC4:
 			return PIOS_SetAstec4Speed(settings.ChannelAddr[mixer_channel],value);
-			break;
 #endif
 		default:
 			return false;

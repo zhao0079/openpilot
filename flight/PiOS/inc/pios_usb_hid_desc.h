@@ -14,8 +14,8 @@
 *******************************************************************************/
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __USB_DESC_H
-#define __USB_DESC_H
+#ifndef __PIOS_USB_HID_DESC_H
+#define __PIOS_USB_HID_DESC_H
 
 /* Includes ------------------------------------------------------------------*/
 /* Exported types ------------------------------------------------------------*/
@@ -51,6 +51,6 @@ extern const uint8_t PIOS_HID_StringVendor[PIOS_HID_SIZ_STRING_VENDOR];
 extern const uint8_t PIOS_HID_StringProduct[PIOS_HID_SIZ_STRING_PRODUCT];
 extern uint8_t PIOS_HID_StringSerial[PIOS_HID_SIZ_STRING_SERIAL];
 
-#endif /* __USB_DESC_H */
+#endif /* __PIOS_USB_HID_DESC_H */
 
 /******************* (C) COPYRIGHT 2010 STMicroelectronics *****END OF FILE****/

@@ -69,6 +69,8 @@
 #define PIOS_INCLUDE_WDG
 #define PIOS_INCLUDE_I2C_ESC
 #define PIOS_INCLUDE_BL_HELPER
+// FIXME XXX this seems to be needed - not enabling by default right now
+//#define PIOS_INCLUDE_BL_HELPER_WRITE_SUPPORT
 
 /* Defaults for Logging */
 #define LOG_FILENAME 			"PIOS.LOG"

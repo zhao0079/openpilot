@@ -584,8 +584,7 @@ int32_t UAVObjSave(UAVObjHandle obj, uint16_t instId)
 
 	  if (PIOS_FLASHFS_ObjSave(obj, instId, instEntry->data) != 0)
 		    return -1;
-#endif
-#if defined(PIOS_INCLUDE_SDCARD)
+#elif defined(PIOS_INCLUDE_SDCARD)
 	  FILEINFO file;
 	  ObjectList *objEntry;
 	  uint8_t filename[14];
@@ -628,7 +627,9 @@ int32_t UAVObjSave(UAVObjHandle obj, uint16_t instId)
  */
 UAVObjHandle UAVObjLoadFromFile(FILEINFO * file)
 {
-#if defined(PIOS_INCLUDE_SDCARD)
+#if defined(PIOS_INCLUDE_FLASH_SECTOR_SETTINGS)
+	return NULL;
+#elif defined(PIOS_INCLUDE_SDCARD)
 	  uint32_t bytesRead;
 	  ObjectList *objEntry;
 	  ObjectInstList *instEntry;
@@ -723,9 +724,7 @@ int32_t UAVObjLoad(UAVObjHandle obj, uint16_t instId)
 		sendEvent(objEntry, instId, EV_UNPACKED);
 	else
 		return -1;
-#endif
-
-#if defined(PIOS_INCLUDE_SDCARD)
+#elif defined(PIOS_INCLUDE_SDCARD)
 	  FILEINFO file;
 	  ObjectList *objEntry;
 	  UAVObjHandle loadedObj;

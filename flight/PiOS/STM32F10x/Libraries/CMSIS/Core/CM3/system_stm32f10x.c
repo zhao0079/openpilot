@@ -68,7 +68,7 @@
           the System clock.
      If you are using different crystal you have to adapt those functions accordingly.
     */
-    
+
 /* #define SYSCLK_FREQ_HSE    HSE_Value */
 /* #define SYSCLK_FREQ_24MHz  24000000 */
 /* #define SYSCLK_FREQ_36MHz  36000000 */

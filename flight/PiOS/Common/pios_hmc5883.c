@@ -62,6 +62,22 @@ void PIOS_HMC5883_Init(void)
 	EXTI_InitTypeDef EXTI_InitStructure;
 	NVIC_InitTypeDef NVIC_InitStructure;
 
+#ifdef STM32F2XX
+	/* Configure EOC pin as input floating */
+	GPIO_InitStructure.GPIO_Pin = PIOS_HMC5883_DRDY_GPIO_PIN;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
+	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	GPIO_Init(PIOS_HMC5883_DRDY_GPIO_PORT, &GPIO_InitStructure);
+
+	/* Configure the End Of Conversion (EOC) interrupt */
+	SYSCFG_EXTILineConfig(PIOS_HMC5883_DRDY_PORT_SOURCE, PIOS_HMC5883_DRDY_PIN_SOURCE);
+	EXTI_InitStructure.EXTI_Line = PIOS_HMC5883_DRDY_EXTI_LINE;
+	EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
+	EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Rising;
+	EXTI_InitStructure.EXTI_LineCmd = ENABLE;
+	EXTI_Init(&EXTI_InitStructure);
+
+#else
 	/* Enable DRDY GPIO clock */
 	RCC_APB2PeriphClockCmd(PIOS_HMC5883_DRDY_CLK | RCC_APB2Periph_AFIO, ENABLE);
 
@@ -77,6 +93,7 @@ void PIOS_HMC5883_Init(void)
 	EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Rising;
 	EXTI_InitStructure.EXTI_LineCmd = ENABLE;
 	EXTI_Init(&EXTI_InitStructure);
+#endif
 
 	/* Enable and set EOC EXTI Interrupt to the lowest priority */
 	NVIC_InitStructure.NVIC_IRQChannel = PIOS_HMC5883_DRDY_IRQn;
@@ -90,7 +107,7 @@ void PIOS_HMC5883_Init(void)
 	HMC5883_InitStructure.M_ODR = PIOS_HMC5883_ODR_15;
 	HMC5883_InitStructure.Meas_Conf = PIOS_HMC5883_MEASCONF_NORMAL;
 	HMC5883_InitStructure.Gain = PIOS_HMC5883_GAIN_1_9;
-	HMC5883_InitStructure.Mode = PIOS_HMC5883_MODE_CONTINUOUS;
+	HMC5883_InitStructure.Mode = PIOS_HMC5883_MODE_SINGLE;
 	PIOS_HMC5883_Config(&HMC5883_InitStructure);
 
 	pios_hmc5883_data_ready = false;
@@ -180,10 +197,11 @@ static void PIOS_HMC5883_Config(PIOS_HMC5883_ConfigTypeDef * HMC5883_Config_Stru
  * \param[out] int16_t array of size 3 to store X, Z, and Y magnetometer readings
  * \return none
 */
-void PIOS_HMC5883_ReadMag(int16_t out[3])
+void PIOS_HMC5883_ReadMag(struct pios_hmc5883_data * data)
 {
 	uint8_t buffer[6];
 	uint8_t ctrlB;
+	int16_t out[3];
 
 	pios_hmc5883_data_ready = false;
 
@@ -232,6 +250,12 @@ void PIOS_HMC5883_ReadMag(int16_t out[3])
 					    + buffer[2 * i + 1]) * 1000 / PIOS_HMC5883_Sensitivity_8_1Ga;
 		break;
 	}
+
+	data->x = out[0];
+	data->y = out[2];
+	data->z = out[1];
+
+	while (!PIOS_HMC5883_Write(PIOS_HMC5883_MODE_REG, PIOS_HMC5883_MODE_SINGLE)) ;
 }
 
 
@@ -322,23 +346,45 @@ static bool PIOS_HMC5883_Write(uint8_t address, uint8_t buffer)
 
 /**
  * @brief Run self-test operation.  Do not call this during operational use!!
- * \return 0 if test failed
- * \return non-zero value if test succeeded
- */
+ * \return true if the test passes, false if it fails
+  */
 int32_t PIOS_HMC5883_Test(void)
 {
+
+	// FIXME XXX This works also on other boards, but PIOS_COM_DEBUG has to be defined
+#ifdef PIOS_COM_DEBUG
 	/* Verify that ID matches (HMC5883 ID is null-terminated ASCII string "H43") */
 	char id[4];
 	PIOS_HMC5883_ReadID((uint8_t *)id);
-	if(!strncmp("H43\0",id,4))
-		return 0;
-	else
-		return 1;
-
-	int32_t passed = 1;
-	uint8_t registers[3] = {0,0,0};
+	if ((id[0] != 'H') || (id[1] != '4') || (id[2] != '3')) {
+		PIOS_COM_SendString(PIOS_COM_DEBUG, "ID mismatch");
+		return false;
+	}
+#endif
 
 	/* Backup existing configuration */
+	uint8_t registers[3] = {0,0,0};
+	
+	// FIXME XXX Unsure which version is better - kept the one we know better
+//=======
+// * \return 0 if test failed
+// * \return non-zero value if test succeeded
+// */
+//int32_t PIOS_HMC5883_Test(void)
+//{
+//	/* Verify that ID matches (HMC5883 ID is null-terminated ASCII string "H43") */
+//	char id[4];
+//	PIOS_HMC5883_ReadID((uint8_t *)id);
+//	if(!strncmp("H43\0",id,4))
+//		return 0;
+//	else
+//		return 1;
+//
+//	int32_t passed = 1;
+//	uint8_t registers[3] = {0,0,0};
+//
+//	/* Backup existing configuration */
+//>>>>>>> 68ac5a271cfdb7556c3a2fa25a7de2494da6aa3d
 	while (!PIOS_HMC5883_Read(PIOS_HMC5883_CONFIG_REG_A,registers,3) );
 
 	/*
@@ -354,20 +400,60 @@ int32_t PIOS_HMC5883_Test(void)
 	 */
 	 while (!PIOS_HMC5883_Write(PIOS_HMC5883_CONFIG_REG_A, PIOS_HMC5883_MEASCONF_BIAS_POS | PIOS_HMC5883_ODR_15)) ;
 	 while (!PIOS_HMC5883_Write(PIOS_HMC5883_CONFIG_REG_B, PIOS_HMC5883_GAIN_2_5)) ;
+	// FIXME XXX Unsure which version is better - kept the one we know better
+//<<<<<<< HEAD
+	 PIOS_DELAY_WaitmS(200);
 	 while (!PIOS_HMC5883_Write(PIOS_HMC5883_MODE_REG,     PIOS_HMC5883_MODE_SINGLE)) ;
+	 PIOS_DELAY_WaitmS(200);
 
 	 uint8_t values[6];
 	 while (!PIOS_HMC5883_Read(PIOS_HMC5883_DATAOUT_XMSB_REG, values, 6)) ;
-	 int16_t x = (int16_t) (((uint16_t) values[0] << 8) + values[1]);
-	 int16_t y = (int16_t) (((uint16_t) values[2] << 8) + values[3]);
-	 int16_t z = (int16_t) (((uint16_t) values[4] << 8) + values[5]);
+	 bool passed = true;
+#ifdef PIOS_COM_DEBUG
+	 PIOS_COM_SendFormattedString(PIOS_COM_DEBUG, " %d %d %d %d %d %d ",
+			 values[0],
+			 values[1],
+			 values[2],
+			 values[3],
+			 values[4],
+			 values[5]);
+	 int16_t x = (values[0] << 8) + values[1];
+	 int16_t z = (values[2] << 8) + values[3];
+	 int16_t y = (values[4] << 8) + values[5];
 
-	 if(abs(abs(x) - 766) > 20)
-		 passed &= 0;
-	 if(abs(abs(y) - 766) > 20)
-		 passed &= 0;
-	 if(abs(abs(z) - 713) > 20)
-		 passed &= 0;
+
+	 if(abs(abs(x) - 766) > 20) {
+		 PIOS_COM_SendFormattedString(PIOS_COM_DEBUG, "X fail %d", x);
+		 passed = false;
+	 }
+	 if(abs(abs(y) - 766) > 20) {
+		 PIOS_COM_SendFormattedString(PIOS_COM_DEBUG, "Y fail %d", y);
+		 passed = false;
+	 }
+	 if(abs(abs(z) - 713) > 20) {
+		 PIOS_COM_SendFormattedString(PIOS_COM_DEBUG, "Z fail %d", z);
+		 passed = false;
+	 }
+#else
+	 passed = false;
+#endif
+
+//=======
+//	 while (!PIOS_HMC5883_Write(PIOS_HMC5883_MODE_REG,     PIOS_HMC5883_MODE_SINGLE)) ;
+//
+//	 uint8_t values[6];
+//	 while (!PIOS_HMC5883_Read(PIOS_HMC5883_DATAOUT_XMSB_REG, values, 6)) ;
+//	 int16_t x = (int16_t) (((uint16_t) values[0] << 8) + values[1]);
+//	 int16_t y = (int16_t) (((uint16_t) values[2] << 8) + values[3]);
+//	 int16_t z = (int16_t) (((uint16_t) values[4] << 8) + values[5]);
+//
+//	 if(abs(abs(x) - 766) > 20)
+//		 passed &= 0;
+//	 if(abs(abs(y) - 766) > 20)
+//		 passed &= 0;
+//	 if(abs(abs(z) - 713) > 20)
+//		 passed &= 0;
+//>>>>>>> 68ac5a271cfdb7556c3a2fa25a7de2494da6aa3d
 
 	 /* Restore backup configuration */
 	 while (!PIOS_HMC5883_Write(PIOS_HMC5883_CONFIG_REG_A,registers[0]) );

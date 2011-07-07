@@ -32,6 +32,47 @@
 #ifndef PIOS_SYS_H
 #define PIOS_SYS_H
 
+/* Public structures */
+/* XXX this should really come from a SoC-specific sub-header */
+struct pios_clock_cfg {
+	/**
+	 * RCC_PLLSource_HSI_Div2 always selects HSI/2 as the PLL
+	 * clock source.
+	 * On Value Line devices, use RCC_PLLSource_PREDIV1 and
+	 * set refclock_prescale to a value between 1 and 16.  Otherwise
+	 * select one of RCC_PLLSource_HSE_Div1 or RCC_PLLSource_HSE_Div2.
+	 */
+	uint32_t source;
+
+	/**
+	 * The reference clock frequency, not required if
+	 * source is RCC_PLLSource_HSI_Div2.
+	 */
+	uint32_t refclock_frequency;
+
+	/**
+	 * The desired reference clock prescaler.
+	 * For Value Line devices this can be 1-16,
+	 * ignored for other devices.
+	 */
+	uint32_t refclock_prescale;
+
+	/** The PLL multiplier value.  One of RCC_PLLMul_* */
+	uint32_t pll_multiply;
+
+	/** Divider from SYSCLK to HCLK, a value from RCC_SYSCLK_Div* */
+	uint32_t hclk_prescale;
+
+	/** Divider from HCLK to PCLK1, a value from RCC_HCLK_Div* */
+	uint32_t pclk1_prescale;
+
+	/** Divider from HCLK to PCLK2, a value from RCC_HCLK_Div* */
+	uint32_t pclk2_prescale;
+
+	/** Divider from PCLK to ADCCLK, a value from RCC_PCLK2_Div* */
+	uint32_t adc_prescale;
+};
+
 /* Public Functions */
 extern void PIOS_SYS_Init(void);
 extern int32_t PIOS_SYS_Reset(void);

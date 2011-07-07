@@ -44,6 +44,14 @@
 #include "flightstatus.h"
 #include "accessorydesired.h"
 
+// FIXME The use of FALSE and TRUE is STRONGLY discouraged over
+// C99-compliant false and true
+#ifndef FALSE
+#include "stdbool.h"
+#define FALSE false
+#define TRUE true
+#endif
+
 // Private constants
 #if defined(PIOS_MANUAL_STACK_SIZE)
 #define STACK_SIZE_BYTES PIOS_MANUAL_STACK_SIZE

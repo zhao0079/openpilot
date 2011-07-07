@@ -120,6 +120,14 @@ help:
 	@echo "                            Windows using mingw and msys"
 	@echo "     sim_win32_clean      - Delete all build output for the win32 simulation"
 	@echo
+	@echo "   [PX2 Simulation]"
+	@echo "     px2_sim_posix        - Build PX2FMU simulation firmware for"
+	@echo "                            a POSIX compatible system (Linux, Mac OS X, ...)"
+	@echo "     px2_sim_posix_clean  - Delete all build output for the POSIX simulation"
+	@echo "     px2_sim_win32        - Build OpenPilot simulation firmware for"
+	@echo "                            Windows using mingw and msys"
+	@echo "     px2_sim_win32_clean  - Delete all build output for the win32 simulation"
+	@echo
 	@echo "   [GCS]"
 	@echo "     gcs                  - Build the Ground Control System (GCS) application"
 	@echo "     gcs_clean            - Remove the Ground Control System (GCS) application"
@@ -432,7 +440,7 @@ all_$(1)_clean: $$(addsuffix _clean, $$(filter bl_$(1), $$(BL_TARGETS)))
 all_$(1)_clean: $$(addsuffix _clean, $$(filter bu_$(1), $$(BU_TARGETS)))
 endef
 
-ALL_BOARDS := openpilot ahrs coptercontrol pipxtreme ins
+ALL_BOARDS := openpilot ahrs coptercontrol pipxtreme ins px2fmu px2io
 
 # Friendly names of each board (used to find source tree)
 openpilot_friendly     := OpenPilot
@@ -440,6 +448,8 @@ coptercontrol_friendly := CopterControl
 pipxtreme_friendly     := PipXtreme
 ins_friendly           := INS
 ahrs_friendly          := AHRS
+px2fmu_friendly        := PX2FMU
+px2io_friendly         := PX2IO
 
 # Start out assuming that we'll build fw, bl and bu for all boards
 FW_BOARDS  := $(ALL_BOARDS)
@@ -499,6 +509,30 @@ sim_win32_%: uavobjects_flight
 	$(V1) mkdir -p $(BUILD_DIR)/sitl_win32
 	$(V1) $(MAKE) --no-print-directory \
 		-C $(ROOT_DIR)/flight/OpenPilot --file=$(ROOT_DIR)/flight/OpenPilot/Makefile.win32 $*
+
+##############################
+#
+# PX2 SECTION 
+#
+##############################
+
+.PHONY: px2_sim_posix
+px2_sim_posix: px2_sim_posix_elf
+
+px2_sim_posix_%: uavobjects_flight
+	$(V1) mkdir -p $(BUILD_DIR)/px2_sitl_posix
+	$(V1) $(MAKE) --no-print-directory -C $(ROOT_DIR)/flight/PX2FMU --file=$(ROOT_DIR)/flight/PX2FMU/Makefile.posix $*
+
+.PHONY: px2_sim_win32
+px2_sim_win32: px2_sim_win32_exe
+
+px2_sim_win32_%: uavobjects_flight
+	$(V1) mkdir -p $(BUILD_DIR)/px2_sitl_win32
+	$(V1) $(MAKE) --no-print-directory -C $(ROOT_DIR)/flight/PX2FMU --file=$(ROOT_DIR)/flight/PX2FMU/Makefile.win32 $*
+
+.PHONY: debian_deps
+debian_deps:
+	sudo apt-get install libudev-dev libusb-dev
 
 ##############################
 #

@@ -32,6 +32,11 @@
 #ifndef PIOS_ADC_H
 #define PIOS_ADC_H
 
+// FIXME XXX Check this
+#ifndef PIOS_ADC_USE_ADC2
+# define PIOS_ADC_USE_ADC2 0
+#endif
+
 // Maximum of 50 oversampled points
 #define PIOS_ADC_MAX_SAMPLES ((((PIOS_ADC_NUM_CHANNELS + PIOS_ADC_USE_ADC2) >> PIOS_ADC_USE_ADC2) << PIOS_ADC_USE_ADC2)* PIOS_ADC_MAX_OVERSAMPLING * 2)
 

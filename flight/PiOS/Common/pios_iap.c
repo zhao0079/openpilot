@@ -16,6 +16,11 @@
  *  Private Definitions/Macros
  ****************************************************************************************/
 
+#if defined(STM32F2XX)
+#define FALSE 0			// not defined by the STM32F2xx headers
+#define TRUE  1
+#endif
+
 /* these definitions reside here for protection and privacy. */
 #define IAP_MAGIC_WORD_1	0x1122
 #define IAP_MAGIC_WORD_2	0xAA55
@@ -58,18 +63,26 @@
  */
 void PIOS_IAP_Init( void )
 {
+#if defined(STM32F2XX)
+	// clocks are already on at this point
+#else
 	/* Enable CRC clock */
 	RCC_AHBPeriphClockCmd(RCC_AHBPeriph_CRC, ENABLE);
 
 	/* Enable PWR and BKP clock */
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_PWR | RCC_APB1Periph_BKP, ENABLE);
+#endif
 
 	/* Enable write access to Backup domain */
 	PWR_BackupAccessCmd(ENABLE);
 
 	/* Clear Tamper pin Event(TE) pending flag */
+	// XXX is this really relevant?
+#if defined(STM32F2XX)
+	RTC_ClearFlag(RTC_FLAG_TAMP1F);
+#else
 	BKP_ClearFlag();
-
+#endif
 }
 
 /*!
@@ -86,8 +99,13 @@ uint32_t	PIOS_IAP_CheckRequest( void )
 	uint16_t	reg1;
 	uint16_t	reg2;
 
+#if defined(STM32F2XX)
+	reg1 = RTC_ReadBackupRegister( MAGIC_REG_1 );
+	reg2 = RTC_ReadBackupRegister( MAGIC_REG_2 );
+#else
 	reg1 = BKP_ReadBackupRegister( MAGIC_REG_1 );
 	reg2 = BKP_ReadBackupRegister( MAGIC_REG_2 );
+#endif
 
 	if( reg1 == IAP_MAGIC_WORD_1 && reg2 == IAP_MAGIC_WORD_2 ) {
 		// We have a match.
@@ -108,16 +126,29 @@ uint32_t	PIOS_IAP_CheckRequest( void )
  */
 void	PIOS_IAP_SetRequest1(void)
 {
+#if defined(STM32F2XX)
+	RTC_WriteBackupRegister( MAGIC_REG_1, IAP_MAGIC_WORD_1);
+#else
 	BKP_WriteBackupRegister( MAGIC_REG_1, IAP_MAGIC_WORD_1);
+#endif
 }
 
 void	PIOS_IAP_SetRequest2(void)
 {
+#if defined(STM32F2XX)
+	RTC_WriteBackupRegister( MAGIC_REG_2, IAP_MAGIC_WORD_2);
+#else
 	BKP_WriteBackupRegister( MAGIC_REG_2, IAP_MAGIC_WORD_2);
+#endif
 }
 
 void	PIOS_IAP_ClearRequest(void)
 {
+#if defined(STM32F2XX)
+	RTC_WriteBackupRegister( MAGIC_REG_1, 0);
+	RTC_WriteBackupRegister( MAGIC_REG_2, 0);
+#else
 	BKP_WriteBackupRegister( MAGIC_REG_1, 0);
 	BKP_WriteBackupRegister( MAGIC_REG_2, 0);
+#endif
 }
