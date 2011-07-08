@@ -64,3 +64,10 @@ GPATH
 GRTAGS
 GSYMS
 GTAGS
+
+# Ignore eclipse project files
+/.metadata
+flight/.project
+flight/.cproject
+flight/.settings
+
