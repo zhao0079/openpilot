@@ -11,10 +11,10 @@
 /**
  * Generic I2C configuration for the STM32F2xx
  */
-#define I2C_CONFIG(_i2c, _ev_handler, _er_handler, _scl_gpio, _scl_pin, _sda_gpio, _sda_pin) \
+#define I2C_CONFIG(_i2c, _scl_gpio, _scl_pin, _sda_gpio, _sda_pin) 		\
 {                                                                       \
     .regs = _i2c,                                                       \
-    .remap = GPIO_AF_ ## _i2c,                                           \
+    .remap = GPIO_AF_ ## _i2c,                                          \
     .init = {                                                           \
         .I2C_ClockSpeed          = 400000,  /* bits/s */                \
         .I2C_Mode                = I2C_Mode_I2C,                        \
@@ -45,7 +45,6 @@
         },                                                              \
     },                                                                  \
     .event = {                                                          \
-        .handler = _ev_handler,                                         \
         .flags   = 0,       /* FIXME: check this */                     \
         .init = {                                                       \
             .NVIC_IRQChannel                   = _i2c ## _EV_IRQn,      \
@@ -55,7 +54,6 @@
         },                                                              \
     },                                                                  \
     .error = {                                                          \
-        .handler = _er_handler,                                         \
         .flags   = 0,       /* FIXME: check this */                     \
         .init = {                                                       \
             .NVIC_IRQChannel                   = _i2c ## _ER_IRQn,      \

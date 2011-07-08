@@ -10,10 +10,8 @@
 
 /**
  * Generic USART configuration structure for an STM32F2xx port.
- *
- * XXX currently it doesn't seem that .irq.handler is used by anything.
  */
-#define USART_CONFIG(_usart, _baudrate, _handler, _rx_gpio, _rx_pin, _tx_gpio, _tx_pin) \
+#define USART_CONFIG(_usart, _baudrate, _rx_gpio, _rx_pin, _tx_gpio, _tx_pin) \
 {                                                                       \
     .regs  = _usart,                                                    \
     .remap = GPIO_AF_ ## _usart,                                        \
@@ -26,7 +24,7 @@
         .USART_Mode                = USART_Mode_Rx | USART_Mode_Tx,     \
     },                                                                  \
     .irq = {                                                            \
-        .handler = _handler,                                            \
+        .handler = NULL,                                                \
         .init    = {                                                    \
             .NVIC_IRQChannel                   = _usart ## _IRQn,       \
             .NVIC_IRQChannelPreemptionPriority = PIOS_IRQ_PRIO_HIGH,	\

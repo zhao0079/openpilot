@@ -65,6 +65,7 @@ FLASH_TOOL = OPENOCD
 
 #MODULES = MAVLink PX2Attitude Altitude Stabilization GPS FlightPlan ManualControl Guidance
 MODULES = Telemetry PX2Attitude Actuator Stabilization ManualControl
+PYMODULES = FlightPlan
 #MODULES = PX2Test
 
 # Paths
@@ -83,19 +84,17 @@ FLIGHTLIBINC = $(FLIGHTLIB)/inc
 PIOS = ../PiOS
 PIOSINC = $(PIOS)/inc
 PIOSSTM32F2XX = $(PIOS)/STM32F2xx
+PIOSSTM32F2XXINC = $(PIOSSTM32F2XX)/inc
 PIOSCOMMON = $(PIOS)/Common
 PIOSBOARDS = $(PIOS)/Boards
 APPLIBDIR = $(PIOSSTM32F2XX)/Libraries
 STMLIBDIR = $(APPLIBDIR)
 STMSPDDIR = $(STMLIBDIR)/STM32F2xx_StdPeriph_Driver
 STMUSBDIR = $(PIOSSTM32F2XX)
-STMUSBDEVDIR = $(STMLIBDIR)/STM32_USB_Device_Library
-STMUSBCOREDIR = $(STMLIBDIR)/STM32_USB_OTG_Driver
 STMSPDSRCDIR = $(STMSPDDIR)/src
 STMSPDINCDIR = $(STMSPDDIR)/inc
 STMUSBSRCDIR = $(STMUSBDEVDIR)/Core/src
 STMUSBINCDIR = $(STMUSBDEVDIR)/Core/inc
-STMUSBCONFDIR = $(PIOSSTM32F2XX)/inc
 CMSISDIR  = $(STMLIBDIR)/CMSIS/Core/CM3
 DOSFSDIR  = $(APPLIBDIR)/dosfs
 MSDDIR  = $(APPLIBDIR)/msd
@@ -121,17 +120,19 @@ UAVOBJSYNTHDIR = $(OUTDIR)/../uavobject-synthetics/flight
 # List C source files here. (C dependencies are automatically generated.)
 # use file-extension c for "c-only"-files
 
-MODNAMES = $(notdir ${MODULES})
+MODNAMES = $(notdir ${MODULES} ${PYMODULES})
 
 ifndef TESTAPP
 
-## PyMite files
+## PyMite files and modules
 SRC += $(OUTDIR)/pmlib_img.c
 SRC += $(OUTDIR)/pmlib_nat.c
 SRC += $(OUTDIR)/pmlibusr_img.c
 SRC += $(OUTDIR)/pmlibusr_nat.c
-SRC += $(wildcard ${PYMITEVM}/*.c)
-SRC += $(wildcard ${PYMITEPLAT}/*.c)
+PYSRC += $(wildcard ${PYMITEVM}/*.c)
+PYSRC += $(wildcard ${PYMITEPLAT}/*.c)
+PYSRC += ${foreach MOD, ${PYMODULES}, ${wildcard ${OPMODULEDIR}/${MOD}/*.c}}
+SRC += $(PYSRC)
 
 ## MODULES
 SRC += ${foreach MOD, ${MODULES}, ${wildcard ${OPMODULEDIR}/${MOD}/*.c}}
@@ -178,7 +179,7 @@ SRC += $(PIOSSTM32F2XX)/pios_ppm.c
 SRC += $(PIOSSTM32F2XX)/pios_debug.c
 SRC += $(PIOSSTM32F2XX)/pios_gpio.c
 SRC += $(PIOSSTM32F2XX)/pios_exti.c
-#SRC += $(PIOSSTM32F2XX)/pios_rtc.c
+
 SRC += $(PIOSSTM32F2XX)/pios_wdg.c
 
 ## PIOS Hardware (Common)
@@ -192,6 +193,7 @@ SRC += $(PIOSCOMMON)/pios_l3g4200.c
 SRC += $(PIOSCOMMON)/pios_hmc5883.c
 SRC += $(PIOSCOMMON)/pios_i2c_esc.c
 SRC += $(PIOSCOMMON)/pios_iap.c
+SRC += $(PIOSCOMMON)/pios_rcvr.c
 SRC += $(PIOSCOMMON)/printf-stdarg.c
 SRC += $(PIOSCOMMON)/pios_crc.c
 
@@ -229,7 +231,7 @@ SRC += $(STMSPDSRCDIR)/misc.c
 SRC += $(RTOSSRCDIR)/list.c
 SRC += $(RTOSSRCDIR)/queue.c
 SRC += $(RTOSSRCDIR)/tasks.c
-SRC += $(RTOSSRCDIR)/timers.c
+#SRC += $(RTOSSRCDIR)/timers.c
 
 ## RTOS Portable
 SRC += $(RTOSSRCDIR)/portable/GCC/ARM_CM3/port.c
@@ -278,25 +280,22 @@ EXTRAINCDIRS  += $(OPUAVOBJINC)
 EXTRAINCDIRS  += $(UAVOBJSYNTHDIR)
 EXTRAINCDIRS  += $(PIOS)
 EXTRAINCDIRS  += $(PIOSINC)
+EXTRAINCDIRS  += $(PIOSSTM32F2XXINC)
 EXTRAINCDIRS  += $(FLIGHTLIBINC)
 EXTRAINCDIRS  += $(PIOSSTM32F2XX)
 EXTRAINCDIRS  += $(PIOSCOMMON)
 EXTRAINCDIRS  += $(PIOSBOARDS)
 EXTRAINCDIRS  += $(STMSPDINCDIR)
 EXTRAINCDIRS  += $(STMUSBINCDIR)
-EXTRAINCDIRS  += $(STMUSBCONFDIR)
-EXTRAINCDIRS  += $(STMUSBDEVDIR)/Core/inc
-EXTRAINCDIRS  += $(STMUSBCOREDIR)/inc
 EXTRAINCDIRS  += $(CMSISDIR)
 EXTRAINCDIRS  += $(DOSFSDIR)
 EXTRAINCDIRS  += $(MSDDIR)
 EXTRAINCDIRS  += $(RTOSINCDIR)
 EXTRAINCDIRS  += $(APPLIBDIR)
 EXTRAINCDIRS  += $(RTOSSRCDIR)/portable/GCC/ARM_CM3
-#EXTRAINCDIRS  += $(AHRSBOOTLOADERINC)
 EXTRAINCDIRS  += $(PYMITEINC)
 
-EXTRAINCDIRS += ${foreach MOD, ${MODULES}, $(OPMODULEDIR)/${MOD}/inc} ${OPMODULEDIR}/System/inc
+EXTRAINCDIRS += ${foreach MOD, ${MODULES} ${PYMODULES}, $(OPMODULEDIR)/${MOD}/inc} ${OPMODULEDIR}/System/inc
 
 
 # List any extra directories to look for library files here.
@@ -445,9 +444,7 @@ endif
 
 # Define programs and commands.
 REMOVE  = $(REMOVE_CMD) -f
-#PYTHON  = python
-#SHELL   = sh
-#COPY    = cp
+PYTHON  = python
 
 # List of all source files.
 ALLSRC     = $(ASRCARM) $(ASRC) $(SRCARM) $(SRC) $(CPPSRCARM) $(CPPSRC)
@@ -463,7 +460,7 @@ LSTFILES   = $(addprefix $(OUTDIR)/, $(addsuffix .lst, $(ALLSRCBASE)))
 DEPFILES   = $(addprefix $(OUTDIR)/dep/, $(addsuffix .o.d, $(ALLSRCBASE)))
 
 # Default target.
-all: gencode gccversion build
+all: gccversion build
 
 ifeq ($(LOADFORMAT),ihex)
 build: elf hex lss sym
@@ -482,6 +479,7 @@ endif
 # Generate intermediate code
 gencode: ${OUTDIR}/InitMods.c ${OUTDIR}/pmlib_img.c ${OUTDIR}/pmlib_nat.c ${OUTDIR}/pmlibusr_img.c ${OUTDIR}/pmlibusr_nat.c ${OUTDIR}/pmfeatures.h 
 
+$(PYSRC): gencode
 # Generate code for module initialization
 ${OUTDIR}/InitMods.c: Makefile
 	@echo $(MSG_MODINIT) $(call toprel, $@)
@@ -543,8 +541,6 @@ opfw:  $(OUTDIR)/$(TARGET).opfw
 
 # Display sizes of sections.
 $(eval $(call SIZE_TEMPLATE, $(OUTDIR)/$(TARGET).elf))
-.PHONY: size
-size: $(OUTDIR)/$(TARGET).elf_size
 
 # Generate Doxygen documents
 docs:
@@ -598,5 +594,5 @@ else
 endif
 
 # Listing of phony targets.
-.PHONY : all build clean clean_list program gencode install
+.PHONY : all build clean clean_list gencode install
 

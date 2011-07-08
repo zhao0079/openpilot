@@ -55,6 +55,23 @@ const struct pios_com_driver pios_usart_com_driver = {
 	.rx_avail = PIOS_USART_RxBufferUsed,
 };
 
+enum pios_usart_dev_magic {
+	PIOS_USART_DEV_MAGIC = 0x11223344,
+};
+
+struct pios_usart_dev {
+	enum pios_usart_dev_magic     magic;
+	const struct pios_usart_cfg * cfg;
+
+	// align to 32-bit to try and provide speed improvement;
+	uint8_t rx_buffer[PIOS_USART_RX_BUFFER_SIZE] __attribute__ ((aligned(4)));
+	t_fifo_buffer rx;
+
+	// align to 32-bit to try and provide speed improvement;
+        uint8_t tx_buffer[PIOS_USART_TX_BUFFER_SIZE] __attribute__ ((aligned(4)));
+	t_fifo_buffer tx;
+};
+
 static bool PIOS_USART_validate(struct pios_usart_dev * usart_dev)
 {
 	return (usart_dev->magic == PIOS_USART_DEV_MAGIC);
@@ -89,6 +106,29 @@ static struct pios_usart_dev * PIOS_USART_alloc(void)
 }
 #endif
 
+/* Bind Interrupt Handlers
+ *
+ * Map all valid USART IRQs to the common interrupt handler
+ * and provide storage for a 32-bit device id IRQ to map
+ * each physical IRQ to a specific registered device instance.
+ */
+static void PIOS_USART_generic_irq_handler(uint32_t usart_id);
+
+#define USART_HANDLER(_n)									\
+	static uint32_t PIOS_USART_ ## _n ## _id;				\
+	void USART ## _n ## _IRQHandler(void) __attribute__ ((alias ("PIOS_USART_" #_n "_irq_handler"))); \
+	static void PIOS_USART_ ## _n ## _irq_handler (void)	\
+	{														\
+		PIOS_USART_generic_irq_handler (PIOS_USART_ ## _n ## _id); \
+	}														\
+	struct hack
+
+USART_HANDLER(1);
+USART_HANDLER(2);
+USART_HANDLER(3);
+USART_HANDLER(4);
+USART_HANDLER(5);
+USART_HANDLER(6);
 
 /**
 * Initialise a single USART device
@@ -131,7 +171,15 @@ int32_t PIOS_USART_Init(uint32_t * usart_id, const struct pios_usart_cfg * cfg)
 	*usart_id = (uint32_t)usart_dev;
 
 	/* Configure USART Interrupts */
-	NVIC_Init((NVIC_InitTypeDef *)&usart_dev->cfg->irq.init);
+	switch ((uint32_t)usart_dev->cfg->regs) {
+	case (uint32_t)USART1: PIOS_USART_1_id = (uint32_t)usart_dev;
+	case (uint32_t)USART2: PIOS_USART_2_id = (uint32_t)usart_dev;
+	case (uint32_t)USART3: PIOS_USART_3_id = (uint32_t)usart_dev;
+	case (uint32_t)UART4:  PIOS_USART_4_id = (uint32_t)usart_dev;
+	case (uint32_t)UART5:  PIOS_USART_5_id = (uint32_t)usart_dev;
+	case (uint32_t)USART6: PIOS_USART_6_id = (uint32_t)usart_dev;
+	}
+	NVIC_Init((NVIC_InitTypeDef *)&(usart_dev->cfg->irq.init));
 	USART_ITConfig(usart_dev->cfg->regs, USART_IT_RXNE, ENABLE);
 	USART_ITConfig(usart_dev->cfg->regs, USART_IT_TXE,  ENABLE);
 
@@ -146,6 +194,19 @@ out_fail:
 	return(-1);
 }
 
+const struct pios_usart_cfg * PIOS_USART_GetConfig(uint32_t usart_id)
+{
+	struct pios_usart_dev * usart_dev = (struct pios_usart_dev *)usart_id;
+
+	bool valid = PIOS_USART_validate(usart_dev);
+
+	if (!valid) {
+		return (NULL);
+	}
+
+	return usart_dev->cfg;
+}
+
 /**
 * Changes the baud rate of the USART peripheral without re-initialising.
 * \param[in] usart_id USART name (GPS, TELEM, AUX)
@@ -156,7 +217,7 @@ static void PIOS_USART_ChangeBaud(uint32_t usart_id, uint32_t baud)
 	struct pios_usart_dev * usart_dev = (struct pios_usart_dev *)usart_id;
 
 	bool valid = PIOS_USART_validate(usart_dev);
-	PIOS_Assert(valid)
+	PIOS_Assert(valid);
 
 	USART_InitTypeDef USART_InitStructure;
 
@@ -336,12 +397,20 @@ static int32_t PIOS_USART_TxBufferPutMore(uint32_t usart_id, const uint8_t *buff
 	return rc;
 }
 
-void PIOS_USART_IRQ_Handler(uint32_t usart_id)
+static void PIOS_USART_generic_irq_handler(uint32_t usart_id)
 {
 	struct pios_usart_dev * usart_dev = (struct pios_usart_dev *)usart_id;
 
 	bool valid = PIOS_USART_validate(usart_dev);
-	PIOS_Assert(valid)
+	PIOS_Assert(valid);
+
+	/* Call any user provided callback function instead of processing
+	 * the interrupt ourselves.
+	 */
+	if (usart_dev->cfg->irq.handler) {
+		(usart_dev->cfg->irq.handler)(usart_id);
+		return;
+	}
 
 	/* Force read of dr after sr to make sure to clear error flags */
 	volatile uint16_t sr = usart_dev->cfg->regs->SR;

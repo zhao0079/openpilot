@@ -86,135 +86,6 @@
 // See also pios_board.c
 //------------------------
 #define PIOS_SPI_MAX_DEVS		2
-
-/* SPI1 is the onboard sensor bus */
-/* TODO: it would be nice to abstract this more */
-#define SPI1_CONFIG(_handler)                                           \
-{                                                                       \
-    .regs    = SPI1,                                                    \
-    .remap   = GPIO_AF_SPI1,                                            \
-    .use_crc = false,                                                   \
-    .init    = {                                                        \
-        .SPI_Mode              = SPI_Mode_Master,                       \
-        .SPI_Direction         = SPI_Direction_2Lines_FullDuplex,       \
-        .SPI_DataSize          = SPI_DataSize_8b,                       \
-        .SPI_NSS               = SPI_NSS_Soft,                          \
-        .SPI_FirstBit          = SPI_FirstBit_MSB,                      \
-        .SPI_CRCPolynomial     = 7,                                     \
-        .SPI_CPOL              = SPI_CPOL_High,                         \
-        .SPI_CPHA              = SPI_CPHA_2Edge,                        \
-        .SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_8,               \
-    },                                                                  \
-    .dma     = {                                                        \
-        /* .ahb_clk - not required */                                   \
-        .irq = {                                                        \
-            .handler = _handler,                                        \
-            .flags   = (DMA_IT_TCIF3 | DMA_IT_TEIF3 | DMA_IT_HTIF3),    \
-            .init    = {                                                \
-                .NVIC_IRQChannel                   = DMA2_Stream0_IRQn, \
-                .NVIC_IRQChannelPreemptionPriority = PIOS_IRQ_PRIO_HIGH, \
-                .NVIC_IRQChannelSubPriority        = 0,                 \
-                .NVIC_IRQChannelCmd                = ENABLE,            \
-            },                                                          \
-        },                                                              \
-        .rx = {                                                         \
-            .channel = DMA2_Stream0,                                    \
-            .init = {                                                   \
-                .DMA_Channel            = DMA_Channel_3,                \
-                .DMA_PeripheralBaseAddr = (uint32_t)&(SPI1->DR),        \
-                /* .DMA_Memory0BaseAddr */                              \
-                .DMA_DIR                = DMA_DIR_PeripheralToMemory,   \
-                /* .DMA_BufferSize */                                   \
-                .DMA_PeripheralInc      = DMA_PeripheralInc_Disable,    \
-                /* .DMA_BufferSize */                                   \
-                .DMA_PeripheralInc      = DMA_PeripheralInc_Disable,    \
-                .DMA_MemoryInc          = DMA_MemoryInc_Enable,         \
-                .DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte,  \
-                .DMA_MemoryDataSize     = DMA_MemoryDataSize_Byte,      \
-                .DMA_Mode               = DMA_Mode_Normal,              \
-                .DMA_Priority           = DMA_Priority_High,            \
-                .DMA_FIFOMode           = DMA_FIFOMode_Disable,         \
-                /* .DMA_FIFOThreshold */                                \
-                .DMA_MemoryBurst        = DMA_MemoryBurst_Single,       \
-                .DMA_PeripheralBurst    = DMA_PeripheralBurst_Single    \
-            },                                                          \
-        },                                                              \
-        .tx = {                                                         \
-            .channel = DMA2_Stream3,                                    \
-            .init = {                                                   \
-                .DMA_Channel            = DMA_Channel_3,                \
-                /* .DMA_Memory0BaseAddr */                              \
-                .DMA_PeripheralBaseAddr = (uint32_t)&(SPI1->DR),        \
-                .DMA_DIR                = DMA_DIR_MemoryToPeripheral,   \
-                /* .DMA_BufferSize */                                   \
-                .DMA_PeripheralInc      = DMA_PeripheralInc_Disable,    \
-                .DMA_MemoryInc          = DMA_MemoryInc_Enable,         \
-                .DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte,  \
-                .DMA_MemoryDataSize     = DMA_MemoryDataSize_Byte,      \
-                .DMA_Mode               = DMA_Mode_Normal,              \
-                .DMA_Priority           = DMA_Priority_High,            \
-                .DMA_FIFOMode           = DMA_FIFOMode_Disable,         \
-                /* .DMA_FIFOThreshold */                                \
-                .DMA_MemoryBurst        = DMA_MemoryBurst_Single,       \
-                .DMA_PeripheralBurst    = DMA_PeripheralBurst_Single    \
-            },                                                          \
-        },                                                              \
-    },                                                                  \
-    .sclk = {                                                           \
-        .gpio = GPIOA,                                                  \
-        .init = {                                                       \
-            .GPIO_Pin   = GPIO_Pin_5,                                   \
-            .GPIO_Mode  = GPIO_Mode_AF,                                 \
-            .GPIO_Speed = GPIO_Speed_100MHz,                             \
-            .GPIO_OType = GPIO_OType_PP,                                \
-            .GPIO_PuPd  = GPIO_PuPd_UP,                                 \
-        },                                                              \
-    },                                                                  \
-    .miso = {                                                           \
-        .gpio = GPIOA,                                                  \
-        .init = {                                                       \
-            .GPIO_Pin   = GPIO_Pin_6,                                   \
-            .GPIO_Mode  = GPIO_Mode_AF,                                 \
-            .GPIO_Speed = GPIO_Speed_50MHz,                             \
-            .GPIO_OType = GPIO_OType_PP,                                \
-            .GPIO_PuPd  = GPIO_PuPd_UP,                                 \
-        },                                                              \
-    },                                                                  \
-    .mosi = {                                                           \
-        .gpio = GPIOA,                                                  \
-        .init = {                                                       \
-            .GPIO_Pin   = GPIO_Pin_7,                                   \
-            .GPIO_Mode  = GPIO_Mode_AF,                                 \
-            .GPIO_Speed = GPIO_Speed_50MHz,                             \
-            .GPIO_OType = GPIO_OType_PP,                                \
-            .GPIO_PuPd  = GPIO_PuPd_UP,                                 \
-        },                                                              \
-    },                                                                  \
-    .slave_count = 2,                                                   \
-    .ssel = {                                                           \
-        {                                                               \
-            .gpio = GPIOC,                                              \
-            .init = {                                                   \
-                .GPIO_Pin   = GPIO_Pin_14,                              \
-                .GPIO_Mode  = GPIO_Mode_OUT,                            \
-                .GPIO_Speed = GPIO_Speed_50MHz,                         \
-                .GPIO_OType = GPIO_OType_PP,                            \
-                .GPIO_PuPd  = GPIO_PuPd_UP,                             \
-            },                                                          \
-        },                                                              \
-        {                                                               \
-            .gpio = GPIOC,                                              \
-            .init = {                                                   \
-                .GPIO_Pin   = GPIO_Pin_15,                              \
-                .GPIO_Mode  = GPIO_Mode_OUT,                            \
-                .GPIO_Speed = GPIO_Speed_50MHz,                         \
-                .GPIO_OType = GPIO_OType_PP,                            \
-                .GPIO_PuPd  = GPIO_PuPd_UP,                             \
-            },                                                          \
-        },                                                              \
-    },                                                                  \
-}
-
 #define SPI_CS_GYRO				0
 #define SPI_CS_ACCEL			1
 
@@ -234,16 +105,16 @@ extern uint32_t pios_i2c_external_adapter_id;
 #include <pios_i2c_config.h>
 
 /* motor control */
-#define I2C1_CONFIG(_ev_handler, _er_handler)	\
-		I2C_CONFIG(I2C1, _ev_handler, _er_handler, GPIOB, GPIO_Pin_8, GPIOB, GPIO_Pin_9)
+#define I2C1_CONFIG()	\
+		I2C_CONFIG(I2C1, GPIOB, GPIO_Pin_8, GPIOB, GPIO_Pin_9)
 
 /* onboard sensors and EEPROM, IO comms */
-#define I2C2_CONFIG(_ev_handler, _er_handler)	\
-		I2C_CONFIG(I2C2, _ev_handler, _er_handler, GPIOB, GPIO_Pin_10, GPIOB, GPIO_Pin_11)
+#define I2C2_CONFIG()	\
+		I2C_CONFIG(I2C2, GPIOB, GPIO_Pin_10, GPIOB, GPIO_Pin_11)
 
 /* offboard sensors */
-#define I2C3_CONFIG(_ev_handler, _er_handler)	\
-		I2C_CONFIG(I2C3, _ev_handler, _er_handler, GPIOA, GPIO_Pin_8, GPIOC, GPIO_Pin_9)
+#define I2C3_CONFIG()	\
+		I2C_CONFIG(I2C3, GPIOA, GPIO_Pin_8, GPIOC, GPIO_Pin_9)
 
 #define PIOS_I2C_EEPROM_ADDRESS					0x50		/* on the MAIN bus */
 #define PIOS_I2C_EEPROM_SIZE					(16 * 1024)
@@ -283,17 +154,17 @@ extern uint32_t pios_i2c_external_adapter_id;
 /* USARTs as available on the PX2 FMU */
 #include <pios_usart_config.h>
 
-#define USART1_CONFIG(_baudrate, _handler)	\
-		USART_CONFIG(USART1, _baudrate, _handler, GPIOB, GPIO_Pin_7, GPIOB, GPIO_Pin_6)
+#define USART1_CONFIG(_baudrate)	\
+		USART_CONFIG(USART1, _baudrate, GPIOB, GPIO_Pin_7, GPIOB, GPIO_Pin_6)
 
-#define USART2_CONFIG(_baudrate, _handler)	\
-		USART_CONFIG(USART2, _baudrate, _handler, GPIOA, GPIO_Pin_3, GPIOA, GPIO_Pin_2)
+#define USART2_CONFIG(_baudrate)	\
+		USART_CONFIG(USART2, _baudrate, GPIOA, GPIO_Pin_3, GPIOA, GPIO_Pin_2)
 
-#define UART5_CONFIG(_baudrate, _handler) 	\
-		USART_CONFIG(UART5, _baudrate, _handler, GPIOD, GPIO_Pin_2, GPIOC, GPIO_Pin_12)
+#define UART5_CONFIG(_baudrate) 	\
+		USART_CONFIG(UART5, _baudrate, GPIOD, GPIO_Pin_2, GPIOC, GPIO_Pin_12)
 
-#define USART6_CONFIG(_baudrate, _handler)	\
-		USART_CONFIG(USART6, _baudrate, _handler, GPIOC, GPIO_Pin_7, GPIOC, GPIO_Pin_6)
+#define USART6_CONFIG(_baudrate)	\
+		USART_CONFIG(USART6, _baudrate, GPIOC, GPIO_Pin_7, GPIOC, GPIO_Pin_6)
 
 //-------------------------
 // PIOS_COM
@@ -347,6 +218,12 @@ extern uint32_t pios_com_aux_id;
 #define PIOS_IRQ_PRIO_MID				8			// higher than RTOS
 #define PIOS_IRQ_PRIO_HIGH				5			// for SPI, ADC, I2C etc...
 #define PIOS_IRQ_PRIO_HIGHEST			4			// for USART etc...
+
+//------------------------
+// PIOS_RCVR
+// See also pios_board.c
+//------------------------
+#define PIOS_RCVR_MAX_DEVS                      12
 
 //-------------------------
 // Receiver PPM input
